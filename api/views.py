@@ -38,20 +38,10 @@ def register(request):
         return HttpResponse(f"User created with username: {username}")
 
 
-# @csrf_exempt
-# def make_user_as_staff(request):
-#     print(request.user)
-#     if request.method == 'POST':
-#         request_body = json.loads(request.body)
-#         if request.user.is_superuser:
-#             username = request_body['username']
-#             is_staff = request_body['is_staff']
-#             print(username, is_staff)
-
-
 class MakeUserAsStaff(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+
     def get(self, request, pk=None):
         if pk:
             if request.user.is_superuser:
@@ -67,6 +57,7 @@ class MakeUserAsStaff(APIView):
 class MakeUserAsNotStaff(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+
     def get(self, request, pk=None):
         if pk:
             if request.user.is_superuser:
@@ -77,6 +68,20 @@ class MakeUserAsNotStaff(APIView):
                     return HttpResponse(f"User {user_to_change.username} is not anymore a staff")
                 else:
                     return HttpResponse(f"User {user_to_change.username} is already not a staff")
+
+
+class ChangeProductStatus(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk=None):
+        if pk:
+            if request.user.is_staff:
+                product = Product.objects.get(pk=pk)
+                request_body = json.loads(request.body)
+                product.status = request_body['status']
+                product.save()
+                return HttpResponse(f"Status of product id={pk} is changed to {request_body['status']}")
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -93,3 +98,15 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        request_body = json.loads(request.body)
+        if 'status' in request_body:
+            return HttpResponse("Status should not be provided", status=400)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        request_body = json.loads(request.body)
+        if 'status' in request_body:
+            return HttpResponse("You cannot update status. Only staff user can update the status.", status=401)
+        return super().update(request, *args, **kwargs)

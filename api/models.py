@@ -18,6 +18,6 @@ class Product(models.Model):
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=500)
     price = models.FloatField(default=0)
-    status = models.CharField(max_length=50, choices=ProductStatus.choices, default=ProductStatus.UPLOADED)
+    status = models.CharField(max_length=50, blank=True, choices=ProductStatus.choices, default=ProductStatus.UPLOADED)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
