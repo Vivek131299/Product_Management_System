@@ -2,12 +2,83 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from rest_framework import viewsets
+from rest_framework.views import APIView
+
 from .models import Category, Product
 from .serializers import CategorySerializer, ProductSerializer
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.models import User
+import json
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.contrib.auth.decorators import login_required
 
-# Create your views here.
+
+@csrf_exempt
+def register(request):
+    if request.method == 'POST':
+        request_body = json.loads(request.body)
+
+        username = request_body['username']
+        if User.objects.filter(username=username).exists():
+            return HttpResponse("Username already exists", status=409)
+        email = request_body['email']
+
+        # validate email
+        try:
+            validate_email(email)
+        except ValidationError as e:
+            print(e.message)
+            return HttpResponse(f"Invalid email: {username}")
+
+        password = request_body['password']
+
+        User.objects.create_user(username=username, email=email, password=password)
+        return HttpResponse(f"User created with username: {username}")
+
+
+# @csrf_exempt
+# def make_user_as_staff(request):
+#     print(request.user)
+#     if request.method == 'POST':
+#         request_body = json.loads(request.body)
+#         if request.user.is_superuser:
+#             username = request_body['username']
+#             is_staff = request_body['is_staff']
+#             print(username, is_staff)
+
+
+class MakeUserAsStaff(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, pk=None):
+        if pk:
+            if request.user.is_superuser:
+                user_to_change = User.objects.get(pk=pk)
+                if user_to_change.is_staff:
+                    return HttpResponse(f"User {user_to_change.username} is already a staff")
+                else:
+                    user_to_change.is_staff = True
+                    user_to_change.save()
+                    return HttpResponse(f"User {user_to_change.username} is now a staff")
+
+
+class MakeUserAsNotStaff(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, pk=None):
+        if pk:
+            if request.user.is_superuser:
+                user_to_change = User.objects.get(pk=pk)
+                if user_to_change.is_staff:
+                    user_to_change.is_staff = False
+                    user_to_change.save()
+                    return HttpResponse(f"User {user_to_change.username} is not anymore a staff")
+                else:
+                    return HttpResponse(f"User {user_to_change.username} is already not a staff")
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
