@@ -14,7 +14,7 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    category_id = models.ForeignKey(Category, related_name='products', on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, related_name='products', on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     description = models.CharField(max_length=500)
     price = models.FloatField(default=0)
